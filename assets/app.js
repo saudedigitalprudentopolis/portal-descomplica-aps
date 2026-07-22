@@ -1,5 +1,5 @@
 const cfg = window.PORTAL_CONFIG || {};
-const state = { data:null, route:'home', query:'', monthlySort:{section:0,column:0,direction:'asc'}, summarySort:{section:0,column:0,direction:'asc'}, municipalSort:{column:6,direction:'desc'} };
+const state = { data:null, route:'home', query:'', monthlySort:{section:0,column:0,direction:'asc'}, summarySort:{section:0,column:0,direction:'asc'}, quadrSort:{group:0,column:0,direction:'asc'}, municipalSort:{column:6,direction:'desc'} };
 const svgIcon = body => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${body}</svg>`;
 const icons = {
   home: svgIcon('<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/>'),
@@ -43,6 +43,27 @@ function applyOfficialMethodologyCorrections(data){
       indicator.title=official.title;
       indicator.content=official.content;
     });
+  });
+  const findIndicator=(areaKey,code)=>(data.areas?.[areaKey]?.indicators||[]).find(item=>String(item.code||'').toUpperCase()===code);
+  const replaceSection=(content,startHeading,endHeading,replacement)=>{
+    const text=String(content||'');
+    const lower=text.toLowerCase();
+    const start=lower.indexOf(startHeading.toLowerCase());
+    const end=lower.indexOf(endHeading.toLowerCase(),start+startHeading.length);
+    if(start<0||end<0) return text;
+    return text.slice(0,start)+replacement.trim()+"\n\n"+text.slice(end);
+  };
+  const activityCollectiveText='Atividade Coletiva:\nPara peso e altura, são considerados os registros no campo “Antropometria” ou nos campos específicos de peso e altura, desde que os dois registros sejam realizados no mesmo dia.';
+  ['C2','C6'].forEach(code=>{
+    const indicator=findIndicator('familia',code);
+    if(indicator) indicator.content=replaceSection(indicator.content,'Atividade Coletiva:','Visita Domiciliar e Territorial:',activityCollectiveText);
+  });
+  const oralHealthNote='Para eSB de 20 horas vinculada a uma eSF, a população vinculada utilizada no denominador deve ser dividida por dois.';
+  ['B1','B4'].forEach(code=>{
+    const indicator=findIndicator('bucal',code);
+    if(indicator&&!String(indicator.content||'').includes(oralHealthNote)){
+      indicator.content=String(indicator.content||'').replace(/\n\nRegular/i,`\n\n${oralHealthNote}\n\nRegular`);
+    }
   });
   return data;
 }
@@ -116,8 +137,12 @@ function homeInstitutionBlocks(){
     </div>
   </section>`
 }
+function officialTechnicalSheetsBlock(){
+  return `<section class="section official-sheets-section"><article class="card official-sheets-card"><div class="official-sheets-copy"><span class="official-sheets-tag">Fonte oficial</span><div><h2>Fichas Técnicas</h2><p>Consulte as notas e fichas técnicas oficiais publicadas pelo Ministério da Saúde.</p></div></div><a class="official-sheets-link" href="https://www.gov.br/saude/pt-br/composicao/saps/publicacoes/fichas-tecnicas" target="_blank" rel="noopener noreferrer">Consultar fichas técnicas <span aria-hidden="true">↗</span></a></article></section>`;
+}
 function home(){
  return `<section class="hero"><div class="hero-grid"><div class="hero-copy"><div class="eyebrow">Atenção Primária à Saúde</div><h1>Portal para consulta simplificada dos indicadores da Atenção Primária à Saúde.</h1><p>Consulte regras, fórmulas, notas e avaliações das equipes.</p></div><div class="hero-logos"><div class="hero-logo-card equal-card"><img class="logo-descomplica-hero" src="assets/logo-descomplica.png" alt="Logo Descomplica APS"></div><div class="hero-logo-card equal-card"><img class="logo-prefeitura-hero" src="assets/logo-prefeitura-saude.png" alt="Logo da Prefeitura e Secretaria de Saúde de Prudentópolis"></div></div></div></section>
+ ${officialTechnicalSheetsBlock()}
  ${homeInstitutionBlocks()}`
 }
 
@@ -1051,7 +1076,7 @@ function quadrimestreFilters(groups,selected){
 function quadrimestreFinalTone(value){
   const n=numericValue(value);
   if(n===null) return 'neutral';
-  if(n<2.5) return 'regular';
+  if(n<=2.5) return 'regular';
   if(n<5) return 'suficiente';
   if(n<=7.5) return 'bom';
   return 'otimo';
@@ -1157,7 +1182,7 @@ function quadrimestreBucalColumn(indicator){
 function quadrimestreDetailModel(group){
   if(group.key==='familia'){
     const scoreColumns=['Vínculo e acompanhamento','Mais Acesso','Infantil','Gestante e Puérpera','Diabetes','Hipertensão','Idoso','Prevenção do câncer da mulher','Nota Final'];
-    const columns=[...scoreColumns,'Classificação'];
+    const columns=[...scoreColumns];
     const units=new Map();
     const vinculo=group.blocks.find(block=>block.key==='vinculo');
     const qualidade=group.blocks.find(block=>block.key==='qualidade');
@@ -1175,13 +1200,13 @@ function quadrimestreDetailModel(group){
       title:'Tabela consolidada das notas',
       subtitle:'',
       headers:['Unidade',...columns],
-      rows:[...units.values()].map(item=>[item.name,...scoreColumns.map(column=>item.values[column]??''),quadrimestreClassificationLabel(item.values['Nota Final'])]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'pt-BR'))
+      rows:[...units.values()].map(item=>[item.name,...scoreColumns.map(column=>item.values[column]??'')]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'pt-BR'))
     };
   }
 
   if(group.key==='bucal'){
     const scoreColumns=['1ª Consulta','Concluído','Exodontias','Escovação','Preventivos','ART','Nota Final'];
-    const columns=[...scoreColumns,'Classificação'];
+    const columns=[...scoreColumns];
     const units=new Map();
     const geral=group.blocks.find(block=>block.key==='geral');
     const detalhado=group.blocks.find(block=>block.key==='detalhado');
@@ -1197,7 +1222,7 @@ function quadrimestreDetailModel(group){
       title:'Tabela consolidada das notas',
       subtitle:'',
       headers:['Unidade',...columns],
-      rows:[...units.values()].map(item=>[item.name,...scoreColumns.map(column=>item.values[column]??''),quadrimestreClassificationLabel(item.values['Nota Final'])]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'pt-BR'))
+      rows:[...units.values()].map(item=>[item.name,...scoreColumns.map(column=>item.values[column]??'')]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'pt-BR'))
     };
   }
 
@@ -1206,17 +1231,51 @@ function quadrimestreDetailModel(group){
     layout:'matrix',
     title:'Tabela consolidada das notas',
     subtitle:'',
-    headers:['Equipe','Média de atendimentos','Ações interprofissionais','Nota Final','Classificação'],
-    rows:(firstBlock?.rows||[]).map(row=>[row[0],row[1],row[2],row[3],quadrimestreClassificationLabel(row[3])]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'pt-BR'))
+    headers:['Equipe','Média de atendimentos','Ações interprofissionais','Nota Final'],
+    rows:(firstBlock?.rows||[]).map(row=>[row[0],row[1],row[2],row[3]]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'pt-BR'))
   };
+}
+function quadrimestreSortValue(header,value){
+  if(value===null || value===undefined || String(value).trim()==='') return {empty:true,value:''};
+  if(quadrimestreLabel(header)==='classificacao'){
+    const order={regular:0,suficiente:1,bom:2,otimo:3};
+    return {empty:false,value:order[quadrimestreLabel(value)]??-1};
+  }
+  const numeric=typeof value==='number'?value:Number(String(value).trim().replace(',','.'));
+  if(!Number.isNaN(numeric)) return {empty:false,value:numeric};
+  return {empty:false,value:String(value).localeCompare?String(value):value};
+}
+function quadrimestreSortedRows(model){
+  const current=state.quadrSort?.group===state.quadrGroup?state.quadrSort:{group:state.quadrGroup||0,column:0,direction:'asc'};
+  const column=Number.isInteger(current.column)?current.column:0;
+  const direction=current.direction==='desc'?-1:1;
+  const header=model.headers[column]||'';
+  return [...model.rows].sort((a,b)=>{
+    const av=quadrimestreSortValue(header,a[column]);
+    const bv=quadrimestreSortValue(header,b[column]);
+    if(av.empty && bv.empty) return 0;
+    if(av.empty) return 1;
+    if(bv.empty) return -1;
+    if(typeof av.value==='number' && typeof bv.value==='number') return (av.value-bv.value)*direction;
+    return String(av.value).localeCompare(String(bv.value),'pt-BR',{numeric:true,sensitivity:'base'})*direction;
+  });
+}
+function quadrimestreSortHeader(label,column){
+  const current=state.quadrSort?.group===state.quadrGroup?state.quadrSort:{group:state.quadrGroup||0,column:0,direction:'asc'};
+  const active=current.column===column;
+  const direction=current.direction||'asc';
+  const aria=active?(direction==='asc'?`Ordenado por ${label}, do menor para o maior`:`Ordenado por ${label}, do maior para o menor`):`Ordenar por ${label}`;
+  const classes=`${quadrimestreLabel(label)==='classificacao'?'classification-column':''} ${column===0?'unit-column':''}`;
+  return `<th class="${classes}" aria-sort="${active?(direction==='asc'?'ascending':'descending'):'none'}"><button class="municipal-sort-button ${active?'active':''}" data-quadr-sort="${column}" title="${esc(aria)}"><span>${esc(label)}</span><span class="municipal-sort-arrows" aria-hidden="true"><i class="${active&&direction==='asc'?'active':''}">▲</i><i class="${active&&direction==='desc'?'active':''}">▼</i></span></button></th>`;
 }
 function quadrimestreDetailTable(group){
   const model=quadrimestreDetailModel(group);
   if(!model.rows.length) return '';
+  const sortedRows=quadrimestreSortedRows(model);
   return `<section class="card quadrimestre-detail-card quadrimestre-matrix-card">
     <div class="quadrimestre-block-head"><div><h3>${esc(model.title)}</h3>${model.subtitle?`<p>${esc(model.subtitle)}</p>`:''}</div></div>
     <div class="quadrimestre-detail-inner">
-      <div class="monthly-table-wrap"><table class="monthly-table summary-table quadrimestre-table quadrimestre-detail-table quadrimestre-matrix-table"><thead><tr>${model.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${model.rows.map(row=>`<tr data-quadr-row>${row.map((value,colIndex)=>`<td class="${colIndex===0?'unit-name':''}">${colIndex===0?`<span class="table-text">${esc(value)}</span>`:quadrimestreCell(group,model.headers[colIndex],value)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <div class="monthly-table-wrap"><table class="monthly-table summary-table quadrimestre-table quadrimestre-detail-table quadrimestre-matrix-table"><thead><tr>${model.headers.map((h,colIndex)=>quadrimestreSortHeader(h,colIndex)).join('')}</tr></thead><tbody>${sortedRows.map(row=>`<tr data-quadr-row>${row.map((value,colIndex)=>`<td class="${colIndex===0?'unit-name unit-column':''} ${quadrimestreLabel(model.headers[colIndex])==='classificacao'?'classification-column':''}">${colIndex===0?`<span class="table-text">${esc(value)}</span>`:quadrimestreCell(group,model.headers[colIndex],value)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
     </div>
   </section>`;
 }
@@ -1444,5 +1503,5 @@ function rowHtml(row){return `<tr>${row.map((v,i)=>`<td>${i>0&&typeof v==='numbe
 function about(){return `<div class="page-title"><div><div class="eyebrow" style="color:var(--primary)">Institucional</div><h1>Sobre o Portal</h1><p>Conheça o objetivo do portal, os responsáveis pelo desenvolvimento e o apoio técnico da Secretaria Municipal de Saúde.</p></div></div>${institutionBlocks()}`}
 function searchPage(q){const results=[];Object.entries(state.data.areas||{}).forEach(([k,a])=>(a.indicators||[]).forEach(i=>{const hay=(i.code+' '+i.title+' '+i.content).toLowerCase();if(hay.includes(q.toLowerCase()))results.push({k,i})}));return `<div class="page-title"><div><div class="eyebrow" style="color:var(--primary)">Pesquisa</div><h1>Resultados para “${esc(q)}”</h1><p>${results.length} resultado(s) encontrado(s).</p></div></div><div class="search-results">${results.map(({k,i})=>`<article class="result" data-route="${k}"><small>${esc(labels[k])} • ${esc(i.code)}</small><h3>${esc(i.title)}</h3><p>${esc((i.content||'').slice(0,180))}...</p></article>`).join('')||'<div class="empty card">Nenhum conteúdo encontrado.</div>'}</div>`}
 function render(){if(!state.data)return;$('#mainNav').innerHTML=nav();let html=state.query?searchPage(state.query):state.route==='home'?home():['vinculo','familia','bucal','emulti'].includes(state.route)?indicators(state.route):state.route==='sobre'?about():tablePage(state.route);$('#app').innerHTML=html;bind()}
-function bind(){document.querySelectorAll('[data-route]').forEach(e=>e.onclick=()=>routeTo(e.dataset.route));document.querySelectorAll('.indicator-button').forEach(b=>b.onclick=()=>{b.parentElement.classList.toggle('open');b.querySelector('.chevron').textContent=b.parentElement.classList.contains('open')?'−':'＋'});document.querySelectorAll('[data-monthly-section]').forEach(button=>button.onclick=()=>{state.monthlySection=Number(button.dataset.monthlySection);state.monthlySort={section:state.monthlySection,column:0,direction:'asc'};render()});const monthlyIndicatorSelect=$('#monthlyIndicatorSelect');if(monthlyIndicatorSelect)monthlyIndicatorSelect.onchange=()=>{state.monthlySection=Number(monthlyIndicatorSelect.value);state.monthlySort={section:state.monthlySection,column:0,direction:'asc'};render()};document.querySelectorAll('[data-monthly-sort]').forEach(button=>button.onclick=()=>{const column=Number(button.dataset.monthlySort);const current=state.monthlySort?.section===state.monthlySection?state.monthlySort:{section:state.monthlySection||0,column:0,direction:'asc'};state.monthlySort=current.column===column?{section:state.monthlySection||0,column,direction:current.direction==='asc'?'desc':'asc'}:{section:state.monthlySection||0,column,direction:column<=1?'asc':'desc'};render()});document.querySelectorAll('[data-resumo-section]').forEach(button=>button.onclick=()=>{state.summarySection=Number(button.dataset.resumoSection);state.summarySort={section:state.summarySection,column:0,direction:'asc'};render()});document.querySelectorAll('[data-summary-sort]').forEach(button=>button.onclick=()=>{const column=Number(button.dataset.summarySort);const current=state.summarySort?.section===state.summarySection?state.summarySort:{section:state.summarySection||0,column:0,direction:'asc'};state.summarySort=current.column===column?{section:state.summarySection||0,column,direction:current.direction==='asc'?'desc':'asc'}:{section:state.summarySection||0,column,direction:column===0?'asc':'desc'};render()});document.querySelectorAll('[data-quadr-group]').forEach(button=>button.onclick=()=>{state.quadrGroup=Number(button.dataset.quadrGroup);render()});document.querySelectorAll('[data-quadr-detail-group]').forEach(button=>button.onclick=()=>{state.quadrDetail=state.quadrDetail||{};state.quadrDetail[button.dataset.quadrDetailGroup]=button.dataset.quadrDetailOption;render()});document.querySelectorAll('[data-municipal-sort]').forEach(button=>button.onclick=()=>{const column=Number(button.dataset.municipalSort);const current=state.municipalSort||{column:6,direction:'desc'};state.municipalSort=current.column===column?{column,direction:current.direction==='asc'?'desc':'asc'}:{column,direction:column===0?'asc':'desc'};render()});const municipalIndicator=$('#municipalIndicator');if(municipalIndicator)municipalIndicator.onchange=()=>{state.municipalIndicator=Number(municipalIndicator.value);render()};const monthlyFilter=$('#monthlyFilter');if(monthlyFilter)monthlyFilter.oninput=()=>{const q=monthlyFilter.value.toLowerCase();document.querySelectorAll('[data-monthly-row]').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?'':'none')};const summaryFilter=$('#summaryFilter');if(summaryFilter)summaryFilter.oninput=()=>{const q=summaryFilter.value.toLowerCase();document.querySelectorAll('[data-summary-row]').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?'':'none')};const quadrimestreFilter=$('#quadrimestreFilter');if(quadrimestreFilter)quadrimestreFilter.oninput=()=>{const q=quadrimestreFilter.value.toLowerCase();document.querySelectorAll('[data-quadr-row]').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?'':'none')};const municipalFilter=$('#municipalFilter');if(municipalFilter)municipalFilter.oninput=()=>{const q=municipalFilter.value.toLowerCase();document.querySelectorAll('[data-municipal-row]').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?'':'none')};const f=$('#tableFilter');if(f)f.oninput=()=>{const q=f.value.toLowerCase();document.querySelectorAll('#tableBody tr').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q)?'':'none')}}
+function bind(){document.querySelectorAll('[data-route]').forEach(e=>e.onclick=()=>routeTo(e.dataset.route));document.querySelectorAll('.indicator-button').forEach(b=>b.onclick=()=>{b.parentElement.classList.toggle('open');b.querySelector('.chevron').textContent=b.parentElement.classList.contains('open')?'−':'＋'});document.querySelectorAll('[data-monthly-section]').forEach(button=>button.onclick=()=>{state.monthlySection=Number(button.dataset.monthlySection);state.monthlySort={section:state.monthlySection,column:0,direction:'asc'};render()});const monthlyIndicatorSelect=$('#monthlyIndicatorSelect');if(monthlyIndicatorSelect)monthlyIndicatorSelect.onchange=()=>{state.monthlySection=Number(monthlyIndicatorSelect.value);state.monthlySort={section:state.monthlySection,column:0,direction:'asc'};render()};document.querySelectorAll('[data-monthly-sort]').forEach(button=>button.onclick=()=>{const column=Number(button.dataset.monthlySort);const current=state.monthlySort?.section===state.monthlySection?state.monthlySort:{section:state.monthlySection||0,column:0,direction:'asc'};state.monthlySort=current.column===column?{section:state.monthlySection||0,column,direction:current.direction==='asc'?'desc':'asc'}:{section:state.monthlySection||0,column,direction:column<=1?'asc':'desc'};render()});document.querySelectorAll('[data-resumo-section]').forEach(button=>button.onclick=()=>{state.summarySection=Number(button.dataset.resumoSection);state.summarySort={section:state.summarySection,column:0,direction:'asc'};render()});document.querySelectorAll('[data-summary-sort]').forEach(button=>button.onclick=()=>{const column=Number(button.dataset.summarySort);const current=state.summarySort?.section===state.summarySection?state.summarySort:{section:state.summarySection||0,column:0,direction:'asc'};state.summarySort=current.column===column?{section:state.summarySection||0,column,direction:current.direction==='asc'?'desc':'asc'}:{section:state.summarySection||0,column,direction:column===0?'asc':'desc'};render()});document.querySelectorAll('[data-quadr-group]').forEach(button=>button.onclick=()=>{state.quadrGroup=Number(button.dataset.quadrGroup);state.quadrSort={group:state.quadrGroup,column:0,direction:'asc'};render()});document.querySelectorAll('[data-quadr-sort]').forEach(button=>button.onclick=()=>{const column=Number(button.dataset.quadrSort);const current=state.quadrSort?.group===state.quadrGroup?state.quadrSort:{group:state.quadrGroup||0,column:0,direction:'asc'};state.quadrSort=current.column===column?{group:state.quadrGroup||0,column,direction:current.direction==='asc'?'desc':'asc'}:{group:state.quadrGroup||0,column,direction:column===0?'asc':'desc'};render()});document.querySelectorAll('[data-quadr-detail-group]').forEach(button=>button.onclick=()=>{state.quadrDetail=state.quadrDetail||{};state.quadrDetail[button.dataset.quadrDetailGroup]=button.dataset.quadrDetailOption;render()});document.querySelectorAll('[data-municipal-sort]').forEach(button=>button.onclick=()=>{const column=Number(button.dataset.municipalSort);const current=state.municipalSort||{column:6,direction:'desc'};state.municipalSort=current.column===column?{column,direction:current.direction==='asc'?'desc':'asc'}:{column,direction:column===0?'asc':'desc'};render()});const municipalIndicator=$('#municipalIndicator');if(municipalIndicator)municipalIndicator.onchange=()=>{state.municipalIndicator=Number(municipalIndicator.value);render()};const monthlyFilter=$('#monthlyFilter');if(monthlyFilter)monthlyFilter.oninput=()=>{const q=monthlyFilter.value.toLowerCase();document.querySelectorAll('[data-monthly-row]').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?'':'none')};const summaryFilter=$('#summaryFilter');if(summaryFilter)summaryFilter.oninput=()=>{const q=summaryFilter.value.toLowerCase();document.querySelectorAll('[data-summary-row]').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?'':'none')};const quadrimestreFilter=$('#quadrimestreFilter');if(quadrimestreFilter)quadrimestreFilter.oninput=()=>{const q=quadrimestreFilter.value.toLowerCase();document.querySelectorAll('[data-quadr-row]').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?'':'none')};const municipalFilter=$('#municipalFilter');if(municipalFilter)municipalFilter.oninput=()=>{const q=municipalFilter.value.toLowerCase();document.querySelectorAll('[data-municipal-row]').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?'':'none')};const f=$('#tableFilter');if(f)f.oninput=()=>{const q=f.value.toLowerCase();document.querySelectorAll('#tableBody tr').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q)?'':'none')}}
 $('#menuButton').onclick=()=>$('#sidebar').classList.toggle('open');$('#globalSearch').oninput=e=>{state.query=e.target.value.trim();render()};window.addEventListener('hashchange',()=>{state.route=location.hash.slice(1)||'home';state.query='';$('#globalSearch').value='';render()});state.route=location.hash.slice(1)||'home';load();

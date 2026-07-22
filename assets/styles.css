@@ -611,6 +611,7 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
 .page-period-badge:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--secondary);box-shadow:0 0 0 4px rgba(244,191,24,.16)}
 .municipal-sort-button{width:100%;min-width:max-content;border:0;background:transparent;color:inherit;padding:0;display:flex;align-items:center;justify-content:center;gap:7px;font:inherit;font-weight:850;text-transform:inherit;letter-spacing:inherit;cursor:pointer}
 .municipal-table th:first-child .municipal-sort-button{justify-content:flex-start}
+.quadrimestre-table th:first-child .municipal-sort-button{justify-content:flex-start}
 .municipal-sort-button:hover,.municipal-sort-button:focus-visible{color:var(--primary);outline:0}
 .municipal-sort-arrows{display:grid;gap:0;line-height:.65;font-size:.56rem;color:#a7b4c8}
 .municipal-sort-arrows i{font-style:normal;transition:.15s}
@@ -618,3 +619,31 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
 .municipal-sort-button.active{color:var(--primary-dark)}
 
 @media(max-width:760px){.page-period-badge{font-size:.72rem}.municipal-sort-button{gap:5px}.municipal-sort-arrows{font-size:.52rem}}
+
+/* Link oficial das fichas técnicas na página inicial */
+.official-sheets-section{margin-top:18px}
+.official-sheets-card{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:18px 22px;border-color:#cdddf5;background:linear-gradient(135deg,#fff 0%,#f5f9ff 100%)}
+.official-sheets-copy{display:flex;align-items:center;gap:16px;min-width:0}
+.official-sheets-tag{display:inline-flex;align-items:center;justify-content:center;min-width:96px;padding:8px 11px;border-radius:999px;background:var(--tint);color:var(--primary);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.055em}
+.official-sheets-copy h2{margin:0 0 4px;color:var(--primary-dark);font-size:1.08rem}
+.official-sheets-copy p{margin:0;color:var(--muted);line-height:1.5;font-size:.9rem}
+.official-sheets-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;padding:11px 15px;border-radius:11px;background:var(--primary);color:#fff;text-decoration:none;font-weight:800;font-size:.88rem;transition:.18s ease}
+.official-sheets-link:hover{transform:translateY(-1px);background:var(--primary-dark)}
+
+/* Tabela quadrimestral compacta e ajustada sem a coluna de classificação */
+.quadrimestre-matrix-table{width:100%;min-width:0;table-layout:fixed;font-size:.78rem}
+.quadrimestre-matrix-table th{min-width:0;padding:8px 5px;font-size:.66rem;letter-spacing:.02em;line-height:1.15;white-space:normal;overflow-wrap:anywhere}
+.quadrimestre-matrix-table td{padding:7px 4px}
+.quadrimestre-matrix-table .unit-column{width:220px;min-width:220px}
+.quadrimestre-matrix-table th:last-child,.quadrimestre-matrix-table td:last-child{width:78px}
+.quadrimestre-matrix-table .summary-pill{min-width:50px;padding:5px 7px;font-size:.75rem}
+.quadrimestre-matrix-table .unit-name,.quadrimestre-matrix-table .unit-name .table-text{font-size:.75rem;white-space:normal;line-height:1.22}
+
+@media(max-width:1100px){
+  .quadrimestre-matrix-table{min-width:960px;table-layout:fixed}
+}
+@media(max-width:760px){
+  .official-sheets-card{align-items:stretch;flex-direction:column;padding:18px}
+  .official-sheets-copy{align-items:flex-start;flex-direction:column;gap:10px}
+  .official-sheets-link{width:100%}
+}
