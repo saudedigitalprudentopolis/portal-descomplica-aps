@@ -606,9 +606,9 @@ function monthlyKpis(section){
   const stats=monthlyStats(section);
   const delta=stats.currentAverage-stats.previousAverage;
   return `<div class="monthly-kpis">
-    <div class="monthly-kpi"><span>Média de maio</span><strong>${formatMonthly(stats.previousAverage)}</strong><small>resultado anterior</small></div>
-    <div class="monthly-kpi monthly-kpi-primary"><span>Média de junho</span><strong>${formatMonthly(stats.currentAverage)}</strong><small>resultado atual</small></div>
-    <div class="monthly-kpi ${delta>0?'is-positive':delta<0?'is-negative':'is-neutral'}"><span>Evolução média</span><strong>${delta>0?'+':''}${formatMonthly(delta)}</strong><small>de maio para junho</small></div>
+    <div class="monthly-kpi"><span>Média de junho</span><strong>${formatMonthly(stats.previousAverage)}</strong><small>resultado anterior</small></div>
+    <div class="monthly-kpi monthly-kpi-primary"><span>Média de julho</span><strong>${formatMonthly(stats.currentAverage)}</strong><small>resultado atual</small></div>
+    <div class="monthly-kpi ${delta>0?'is-positive':delta<0?'is-negative':'is-neutral'}"><span>Evolução média</span><strong>${delta>0?'+':''}${formatMonthly(delta)}</strong><small>de junho para julho</small></div>
     <div class="monthly-kpi"><span>Unidades em alta</span><strong>${stats.improved}<em>/${stats.valid.length}</em></strong><small>com evolução positiva</small></div>
   </div>`;
 }
@@ -825,7 +825,7 @@ function monthlyDashboard(section){
   const stats=monthlyStats(alignedSection);
   const maxValue=canonicalIndicatorKey(section.group,section.title)==='vinculo'?10:100;
   const sorted=monthlySortedRows(alignedSection);
-  const headers=['Posição','Unidade','Maio','Junho','Evolução'];
+  const headers=['Posição','Unidade','Junho','Julho','Evolução'];
   const best=stats.best;
   return `${monthlyKpis(alignedSection)}
     <div class="monthly-highlight card">
@@ -833,7 +833,7 @@ function monthlyDashboard(section){
       ${best?`<div class="monthly-best"><span>Maior evolução</span><strong>${esc(best.row[0])}</strong><small>+${formatMonthly(best.change)} pontos</small></div>`:`<div class="monthly-best"><span>Evolução</span><strong>Sem evolução</strong><small>Nenhuma unidade apresentou aumento</small></div>`}
     </div>
     <div class="monthly-table-card card">
-      <div class="monthly-table-head"><div><h3>Resultados por unidade</h3><p>Use as setas dos títulos para reorganizar a tabela.</p></div><div class="monthly-legend"><span><i class="legend-dot previous"></i>Maio</span><span><i class="legend-dot current"></i>Junho</span><span><i class="legend-dot evolution"></i>Evolução</span></div></div>
+      <div class="monthly-table-head"><div><h3>Resultados por unidade</h3><p>Use as setas dos títulos para reorganizar a tabela.</p></div><div class="monthly-legend"><span><i class="legend-dot previous"></i>Junho</span><span><i class="legend-dot current"></i>Julho</span><span><i class="legend-dot evolution"></i>Evolução</span></div></div>
       <div class="monthly-table-wrap"><table class="monthly-table"><thead><tr>${headers.map((header,column)=>monthlySortHeader(header,column)).join('')}</tr></thead><tbody id="monthlyTableBody">${sorted.map(item=>{const row=item.row;return `<tr data-monthly-row><td><span class="rank-badge">${item.rank}º</span></td><td class="unit-name">${esc(row[0])}</td><td>${monthlyScore(row[1],maxValue,'previous',section)}</td><td>${monthlyScore(row[2],maxValue,'current',section)}</td><td>${monthlyEvolution(row[3])}</td></tr>`}).join('')}</tbody></table></div>
     </div>`;
 }
